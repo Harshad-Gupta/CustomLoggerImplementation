@@ -9,35 +9,29 @@ namespace LoggerAssembly
 {
     public class CustomLogger
     {
-        bool DebugMode = false;
-        bool InfoMode = false;
-        bool ErrorMode = false;
-        bool CustomMode = false;
-
-        bool TrimmedFormat = false;
-
         string ApplicationName = string.Empty;
 
-        StringBuilder sb_ErrorMessage = new StringBuilder();
-        StringBuilder sb_DebugMessage = new StringBuilder();
-        StringBuilder sb_InfoMessage = new StringBuilder();
-        StringBuilder sb_CustomMessage = new StringBuilder();
+        bool DebugFile = false;
+        bool InfoFile = false;
+        bool ErrorFile = false;
+        bool CustomFile = false;
+
+        StringBuilder ErrorMessageString = new StringBuilder();
+        StringBuilder DebugMessageString = new StringBuilder();
+        StringBuilder InfoMessageString = new StringBuilder();
 
         string ErrorFilePath = string.Empty;
         string DebugFilePath = string.Empty;
         string InfoFilePath = string.Empty;
-        string CustomFilePath = string.Empty;
 
         Timer log_Timer = null;
 
-        public CustomLogger(bool ErrorMode = false, bool DebugMode = false, bool CustomMode = false, bool InfoMode = false, string ApplicationName = "", bool TrimmedFormat = false)
+        public CustomLogger(bool ErrorMode = false, bool DebugMode = false, bool CustomMode = false, bool InfoMode = false, string ApplicationName = "")
         {
-            this.ErrorMode = ErrorMode;
-            this.DebugMode = DebugMode;
-            this.InfoMode = InfoMode;
-            this.CustomMode = CustomMode;
+            this.ErrorFile = ErrorMode;
+            this.DebugFile = DebugMode;
+            this.InfoFile = InfoMode;
             this.ApplicationName = ApplicationName;
-            this.TrimmedFormat = TrimmedFormat;
         }
 
         public bool[] Initialize(string path = "auto", string ExceptionFilename = "ExceptionLOG", string DebugFilename = "DebugLOG", string InfoFilename = "InfoLOG")
@@ -45,21 +39,21 @@ namespace LoggerAssembly
             bool[] fileExists = new bool[3] { false, false, false };
             try
             {
-                if (ErrorMode)
+                if (ErrorFile)
                 {
                     ExceptionFilename = CreateRequiredFiles(path, ExceptionFilename);
                     ErrorFilePath = ExceptionFilename;
                     fileExists[0] = CreateLogFile(ExceptionFilename);
                 }
 
-                if (DebugMode)
+                if (DebugFile)
                 {
                     DebugFilename = CreateRequiredFiles(path, DebugFilename);
                     DebugFilePath = DebugFilename;
                     fileExists[1] = CreateLogFile(DebugFilename);
                 }
 
-                if (InfoMode)
+                if (InfoFile)
                 {
                     InfoFilename = CreateRequiredFiles(path, InfoFilename);
                     InfoFilePath = InfoFilename;
@@ -79,23 +73,6 @@ namespace LoggerAssembly
             return fileExists;
         }
 
-        public bool InitializeCustom(string path = "auto", string CustomFilename = "CustomLOG")
-        {
-            bool fileExists = false;
-            try
-            {
-                if (CustomMode)
-                {
-                    CustomFilename = CreateRequiredFiles(path, CustomFilename);
-                    CustomFilePath = CustomFilename;
-                    fileExists = CreateLogFile(CustomFilename);
-                }
-            }
-            catch (Exception ee) { Console.WriteLine(DateTime.Now + " => InitializeCustom | " + ee.Message); }
-
-            return fileExists;
-        }
-
         string CreateRequiredFiles(string path, string Filename)
         {
             try
@@ -104,7 +81,6 @@ namespace LoggerAssembly
 
                 if (path == "auto")
                     path = Path.GetDirectoryName(AssemblyPath);
-                    //path = AssemblyPath.Substring(0, AssemblyPath.Length - 12);
 
                 if (!path.EndsWith("\\"))
                     path += "\\";
@@ -142,102 +118,71 @@ namespace LoggerAssembly
 
         public void Debug(string Message)
         {
-            if (DebugMode)
+            if (DebugFile)
             {
-                lock (sb_DebugMessage)
+                lock (DebugMessageString)
                 {
-                    if (TrimmedFormat)
-                        sb_DebugMessage.AppendLine($"{DateTime.Now.ToString("ddMMMyyyy HH:mm:ss:fff").ToUpper()} > {Message}");
-                    else
-                        sb_DebugMessage.AppendLine($"[DEBUG] {DateTime.Now} => {Message}");
+                    DebugMessageString.AppendLine($"[DEBUG] {DateTime.Now} => {Message}");
                 }
             }
         }
 
         public void Info(string Message = "")
         {
-            if (InfoMode)
+            if (InfoFile)
             {
-                lock (sb_InfoMessage)
+                lock (InfoMessageString)
                 {
-                    if (TrimmedFormat)
-                        sb_InfoMessage.AppendLine($"{DateTime.Now.ToString("ddMMMyyyy HH:mm:ss:fff").ToUpper()} > {Message}");
-                    else
-                        sb_InfoMessage.AppendLine($"[INFO] {DateTime.Now} => {Message}");
+                    InfoMessageString.AppendLine($"[INFO] {DateTime.Now} => {Message}");
                 }
             }
         }
 
         public void Error(Exception obj, [CallerMemberName] string ErrorMessage = "")
         {
-            if (ErrorMode)
+            if (ErrorFile)
             {
-                lock (sb_ErrorMessage)
+                lock (ErrorMessageString)
                 {
-                    if (TrimmedFormat)
-                        sb_ErrorMessage.AppendLine($"{DateTime.Now.ToString("ddMMMyyyy HH:mm:ss:fff").ToUpper()} > {ErrorMessage} {Environment.NewLine} {((obj is null) ? string.Empty : obj.ToString())} {Environment.NewLine}");
-                    else
-                        sb_ErrorMessage.AppendLine($"[EXCEPTION] => {ErrorMessage} at {DateTime.Now}\n{((obj is null) ? string.Empty : obj.ToString())}\n");
-                }
-            }
-        }
-        public void Custom(string Message)
-        {
-            if (CustomMode)
-            {
-                lock (sb_CustomMessage)
-                {
-                    sb_CustomMessage.AppendLine(Message);
+                    ErrorMessageString.AppendLine($"[EXCEPTION] => {ErrorMessage} at {DateTime.Now}\n{((obj is null) ? string.Empty : obj.ToString())}\n");
                 }
             }
         }
 
         void WriteToLogs(object sender, ElapsedEventArgs e)
         {
-            if (ErrorMode)
+            if (ErrorFile)
             {
-                lock (sb_ErrorMessage)
+                lock (ErrorMessageString)
                 {
-                    if ((sb_ErrorMessage.Length > 0) && (ErrorFilePath != string.Empty))
+                    if ((ErrorMessageString.Length > 0) && (ErrorFilePath != string.Empty))
                     {
-                        File.AppendAllText(ErrorFilePath, sb_ErrorMessage.ToString());
-                        sb_ErrorMessage.Clear();
+                        File.AppendAllText(ErrorFilePath, ErrorMessageString.ToString());
+                        ErrorMessageString.Clear();
                     }
                 }
             }
 
-            if (DebugMode)
+            if (DebugFile)
             {
-                lock (sb_DebugMessage)
+                lock (DebugMessageString)
                 {
-                    if ((sb_DebugMessage.Length > 0) && (DebugFilePath != string.Empty))
+                    if ((DebugMessageString.Length > 0) && (DebugFilePath != string.Empty))
                     {
-                        File.AppendAllText(DebugFilePath, sb_DebugMessage.ToString());
-                        sb_DebugMessage.Clear();
+                        File.AppendAllText(DebugFilePath, DebugMessageString.ToString());
+                        DebugMessageString.Clear();
                     }
                 }
             }
 
-            if (InfoMode)
+            if (InfoFile)
             {
-                lock (sb_InfoMessage)
+                lock (InfoMessageString)
                 {
-                    if ((sb_InfoMessage.Length > 0) && (InfoFilePath != string.Empty))
+                    if ((InfoMessageString.Length > 0) && (InfoFilePath != string.Empty))
                     {
-                        File.AppendAllText(InfoFilePath, sb_InfoMessage.ToString());
-                        sb_InfoMessage.Clear();
-                    }
-                }
-            }
-
-            if (CustomMode)
-            {
-                lock (sb_CustomMessage)
-                {
-                    if ((sb_CustomMessage.Length > 0) && (CustomFilePath != string.Empty))
-                    {
-                        File.AppendAllText(CustomFilePath, sb_CustomMessage.ToString());
-                        sb_CustomMessage.Clear();
+                        File.AppendAllText(InfoFilePath, InfoMessageString.ToString());
+                        InfoMessageString.Clear();
                     }
                 }
             }
